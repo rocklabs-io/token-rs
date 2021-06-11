@@ -14,8 +14,13 @@ lazy_static! {
 }
 
 #[init]
-fn init() {
-
+fn init(name: String, symbol: String, decimals: u64, total_supply: u64) {
+    unsafe {
+        NAME = Box::leak(name.into_boxed_str());
+        SYMBOL = Box::leak(symbol.into_boxed_str());
+        DECIMALS = decimals;
+        TOTALSUPPLY = total_supply;
+    }
 }
 
 /*
@@ -53,34 +58,45 @@ fn balance_of(id: Principal) -> u64 {
 fn allowance(owner: Principal, spender: Principal) -> u64 {
 
 }
+*/
 
 #[query(name = "name")]
 fn name() -> String {
-
+    unsafe {
+        NAME.to_string()
+    }
 }
 
 #[query(name = "symbol")]
 fn symbol() -> String {
-
+    unsafe {
+        SYMBOL.to_string()
+    }
 }
 
 #[query(name = "decimals")]
 fn decimals() -> u64 {
-
+    unsafe {
+        DECIMALS
+    }
 }
 
 #[query(name = "totalSupply")]
 fn total_supply() -> u64 {
-
+    unsafe {
+        TOTALSUPPLY
+    }
 }
 
 #[query(name = "owner")]
 fn owner() -> Principal {
-
+    unsafe {
+        OWNER
+    }
 }
 
 #[query(name = "controller")]
 fn controller() -> Principal {
-
+    // TODO: get token canister controller
+    Principal::anonymous()
 }
-*/

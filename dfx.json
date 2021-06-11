@@ -5,12 +5,6 @@
 		  "candid": "/src/erc20/erc20.did",
 		  "wasm": "target/wasm32-unknown-unknown/release/erc20.wasm",
 		  "type": "custom"
-	  },
-	  "notify": {
-		  "build": "cargo build --target wasm32-unknown-unknown --package notify --release",
-		  "candid": "/src/notify/notify.did",
-		  "wasm": "target/wasm32-unknown-unknown/release/erc20.wasm",
-		  "type": "custom"
 	  }
   },
   "defaults": {
