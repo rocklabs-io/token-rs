@@ -90,9 +90,10 @@ fn approve(spender: Principal, value: u64) -> bool {
     let allowances_read = ALLOWANCES.read().unwrap();
     match allowances_read.get(&owner) {
         Some(inner) => {
-            inner.insert(spender, value);
+            let mut temp = inner.clone();
+            temp.insert(spender, value);
             let mut allowances = ALLOWANCES.write().unwrap();
-            allowances.insert(owner, inner);
+            allowances.insert(owner, temp);
         },
         None => {
             let mut inner = HashMap::new();
