@@ -1,6 +1,8 @@
 use ic_cdk::export::{Principal};
+use ic_cdk::api;
 use ic_cdk_macros::*;
 use std::collections::HashMap;
+use std::sync::RwLock;
 
 static mut NAME: &str = "";
 static mut SYMBOL: &str = "";
@@ -9,8 +11,8 @@ static mut OWNER: Principal = Principal::anonymous();
 static mut TOTALSUPPLY: u64 = 0;
 
 lazy_static! {
-    static ref BALANCES: HashMap<Principal, u64> = HashMap::new();
-    static ref ALLOWANCES: HashMap<Principal, HashMap<Principal, u64>> = HashMap::new();
+    static ref BALANCES: RwLock<HashMap<Principal, u64>> = RwLock::new(HashMap::new());
+    static ref ALLOWANCES: RwLock<HashMap<Principal, HashMap<Principal, u64>>> = RwLock::new(HashMap::new());
 }
 
 #[init]
@@ -20,6 +22,9 @@ fn init(name: String, symbol: String, decimals: u64, total_supply: u64) {
         SYMBOL = Box::leak(symbol.into_boxed_str());
         DECIMALS = decimals;
         TOTALSUPPLY = total_supply;
+        OWNER = api::caller();
+        let mut balances = BALANCES.write().unwrap();
+        balances.insert(OWNER, TOTALSUPPLY);
     }
 }
 
@@ -48,17 +53,30 @@ fn mint() -> bool {
 fn burn() -> bool {
 
 }
+*/
 
 #[query(name = "balanceOf")]
 fn balance_of(id: Principal) -> u64 {
-
+    let balances = BALANCES.read().unwrap();
+    match balances.get(&id) {
+        Some(balance) => *balance,
+        None => 0,
+    }
 }
 
 #[query(name = "allowance")]
 fn allowance(owner: Principal, spender: Principal) -> u64 {
-
+    let allowances = ALLOWANCES.read().unwrap();
+    match allowances.get(&owner) {
+        Some(inner) => {
+            match inner.get(&spender) {
+                Some(value) => *value,
+                None => 0,
+            }
+        },
+        None => 0,
+    }
 }
-*/
 
 #[query(name = "name")]
 fn name() -> String {
