@@ -2,7 +2,7 @@
   "canisters": {
 	  "erc20": {
 		  "build": "cargo build --target wasm32-unknown-unknown --package erc20 --release",
-		  "candid": "/src/erc20/erc20.did",
+		  "candid": "/src/erc20/token.did",
 		  "wasm": "target/wasm32-unknown-unknown/release/erc20.wasm",
 		  "type": "custom"
 	  }
