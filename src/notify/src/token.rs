@@ -1,8 +1,15 @@
-use ic_cdk::export::{Principal};
-use ic_cdk::storage;
+use dfn_core::{
+    api::{call_bytes_with_cleanup, ic0::call_on_cleanup, print, Funds},
+    CanisterId,
+};
 use ic_cdk::api;
+use ic_cdk::export::Principal;
+use ic_cdk::storage;
 use ic_cdk_macros::*;
-use std::collections::HashMap;
+use ic_types::PrincipalId;
+use std::{collections::HashMap, convert::TryFrom};
+
+use super::TransactionNotification;
 
 static mut NAME: &str = "";
 static mut SYMBOL: &str = "";
@@ -31,23 +38,39 @@ fn transfer(to: Principal, value: u64) -> bool {
     if from == to {
         return false;
     }
+    let to = PrincipalId::from(to.as_slice());
+    //TODO: determine whether "to" is a canister 
+    let to = CanisterId::try_from(to).unwrap();
     let from_balance = balance_of(from);
     api::print(from_balance.to_string());
     if from_balance < value {
         false
     } else {
-        let to_balance = balance_of(to);
-        let balances = storage::get_mut::<Balances>();
-        balances.insert(from, from_balance - value);
-        balances.insert(to, to_balance + value);
         // TODO: notify receiver
-        /* pseudo code:
-        receiver = actor.fromPrincipal(to);
-        if receiver.wants_notify() {
-            resp = receiver.on_receive_transfer(tokenInfo, from, amount);
+        let transaction_notification_args = TransactionNotification {
+            from: from,
+            to: to,
+            amount,
+        };
+
+        let bytes = candid::encode_one(transaction_notification_args)
+            .expect("transaction notification serialization failed");
+        let response =
+            call_bytes_with_cleanup(to, "on_receive_transfer", &bytes[..], Funds::zero()).await;
+
+        match response {
+            Ok(bs) => {
+                let to_balance = balance_of(to);
+                let balances = storage::get_mut::<Balances>();
+                balances.insert(from, from_balance - value);
+                balances.insert(to, to_balance + value);
+                return true;
+            }
+            Err((_code, err)) => {
+                print(err);
+                return false;
+            }
         }
-        */
-        true
     }
 }
 
@@ -100,37 +123,27 @@ fn balance_of(id: Principal) -> u64 {
 
 #[query(name = "name")]
 fn name() -> String {
-    unsafe {
-        NAME.to_string()
-    }
+    unsafe { NAME.to_string() }
 }
 
 #[query(name = "symbol")]
 fn symbol() -> String {
-    unsafe {
-        SYMBOL.to_string()
-    }
+    unsafe { SYMBOL.to_string() }
 }
 
 #[query(name = "decimals")]
 fn decimals() -> u64 {
-    unsafe {
-        DECIMALS
-    }
+    unsafe { DECIMALS }
 }
 
 #[query(name = "totalSupply")]
 fn total_supply() -> u64 {
-    unsafe {
-        TOTALSUPPLY
-    }
+    unsafe { TOTALSUPPLY }
 }
 
 #[query(name = "owner")]
 fn owner() -> Principal {
-    unsafe {
-        OWNER
-    }
+    unsafe { OWNER }
 }
 
 #[query(name = "controller")]
