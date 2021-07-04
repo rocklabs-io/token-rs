@@ -1,12 +1,7 @@
-use dfn_core::{
-    api::{call_bytes_with_cleanup, ic0::call_on_cleanup, print, Funds},
-    CanisterId,
-};
 use ic_cdk::api;
 use ic_cdk::export::Principal;
 use ic_cdk::storage;
 use ic_cdk_macros::*;
-use ic_types::PrincipalId;
 use std::{collections::HashMap, convert::TryFrom};
 
 use super::TransactionNotification;
@@ -33,41 +28,39 @@ fn init(name: String, symbol: String, decimals: u64, total_supply: u64) {
 }
 
 #[update(name = "transfer")]
-fn transfer(to: Principal, value: u64) -> bool {
+pub async fn transfer(to: Principal, value: u64) -> bool {
     let from = api::caller();
     if from == to {
         return false;
     }
-    let to = PrincipalId::from(to.as_slice());
-    //TODO: determine whether "to" is a canister 
-    let to = CanisterId::try_from(to).unwrap();
+    //TODO: determine whether "to" is a canister
     let from_balance = balance_of(from);
     api::print(from_balance.to_string());
     if from_balance < value {
         false
     } else {
+        let to_balance = balance_of(to);
+        let balances = storage::get_mut::<Balances>();
+        balances.insert(from, from_balance - value);
+        balances.insert(to, to_balance + value);
+
         // TODO: notify receiver
         let transaction_notification_args = TransactionNotification {
             from: from,
             to: to,
-            amount,
+            amount: value,
         };
 
         let bytes = candid::encode_one(transaction_notification_args)
             .expect("transaction notification serialization failed");
-        let response =
-            call_bytes_with_cleanup(to, "on_receive_transfer", &bytes[..], Funds::zero()).await;
+        let response = api::call::call(to, "on_receive_transfer", transaction_notification_args).await;
 
         match response {
             Ok(bs) => {
-                let to_balance = balance_of(to);
-                let balances = storage::get_mut::<Balances>();
-                balances.insert(from, from_balance - value);
-                balances.insert(to, to_balance + value);
                 return true;
             }
             Err((_code, err)) => {
-                print(err);
+                api::print(err);
                 return false;
             }
         }
